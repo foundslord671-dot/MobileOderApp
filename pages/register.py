@@ -2,6 +2,7 @@ import streamlit as st
 
 from database.connection import get_connection
 from utils.security import hash_password
+from services.auth_service import login_vendor
 
 
 st.set_page_config(
@@ -63,9 +64,9 @@ if st.button("Create Account", use_container_width=True):
     else:
 
         try:
+
             conn = get_connection()
             cur = conn.cursor()
-
 
             # Check existing email
             cur.execute(
@@ -75,7 +76,6 @@ if st.button("Create Account", use_container_width=True):
 
             email_exists = cur.fetchone()
 
-
             # Check existing username
             cur.execute(
                 "SELECT id FROM vendors WHERE store_username = %s",
@@ -83,7 +83,6 @@ if st.button("Create Account", use_container_width=True):
             )
 
             username_exists = cur.fetchone()
-
 
             if email_exists:
                 st.error("This email is already registered.")
@@ -94,7 +93,6 @@ if st.button("Create Account", use_container_width=True):
             else:
 
                 password_hash = hash_password(password)
-
 
                 cur.execute(
                     """
@@ -120,17 +118,43 @@ if st.button("Create Account", use_container_width=True):
                     )
                 )
 
-
                 conn.commit()
 
-                st.success(
-                    "✅ Account created successfully!"
+                cur.close()
+                conn.close()
+
+                # Automatically log the user in
+                success, result = login_vendor(
+                    email,
+                    password
                 )
 
+                if success:
 
-            cur.close()
-            conn.close()
+                    st.session_state["logged_in"] = True
+                    st.session_state["vendor"] = result
 
+                    st.success(
+                        "✅ Account created successfully!"
+                    )
+
+                    st.switch_page(
+                        "pages/vendor_dashboard.py"
+                    )
+
+                else:
+
+                    st.success(
+                        "✅ Account created successfully!"
+                    )
+
+                    st.info(
+                        "Please login with your new account."
+                    )
+
+            if not conn.closed:
+                cur.close()
+                conn.close()
 
         except Exception as e:
 
