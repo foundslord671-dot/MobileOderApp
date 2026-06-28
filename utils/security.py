@@ -1,0 +1,14 @@
+import bcrypt
+
+
+def hash_password(password):
+    password = password.encode("utf-8")
+    hashed = bcrypt.hashpw(password, bcrypt.gensalt())
+    return hashed.decode("utf-8")
+
+
+def verify_password(password, password_hash):
+    return bcrypt.checkpw(
+        password.encode("utf-8"),
+        password_hash.encode("utf-8")
+    )
