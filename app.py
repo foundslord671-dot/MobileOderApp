@@ -1,8 +1,12 @@
 import streamlit as st
-from database.models import create_tables
 
-# Create database tables automatically
+from database.models import create_tables
+from components.customer_store import show_customer_store
+
+
+# Create database tables (safe because your SQL uses IF NOT EXISTS)
 create_tables()
+
 
 st.set_page_config(
     page_title="Mobile Order App",
@@ -10,13 +14,5 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🛒 Mobile Order App")
 
-st.write("""
-Welcome to the Mobile Order App.
-
-Choose a page from the sidebar to continue.
-""")
-
-st.sidebar.title("Navigation")
-st.sidebar.success("Select a page from the sidebar.")
+show_customer_store()
