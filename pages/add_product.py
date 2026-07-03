@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 
 from database.connection import get_connection
@@ -121,6 +122,7 @@ if st.button(
             conn = get_connection()
 
             cur = conn.cursor()
+
             cur.execute(
                 """
                 INSERT INTO products
@@ -156,6 +158,12 @@ if st.button(
             )
 
             st.balloons()
+
+            time.sleep(1.5)
+
+            st.switch_page(
+                "pages/vendor_dashboard.py"
+            )
 
         except Exception as e:
 
