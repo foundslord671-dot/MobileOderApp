@@ -1,6 +1,7 @@
 import streamlit as st
 
 from database.connection import get_connection
+from utils.cloudinary_service import upload_image
 
 
 st.set_page_config(
@@ -10,8 +11,14 @@ st.set_page_config(
 )
 
 
+# -----------------------------
 # Protect page
-if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
+# -----------------------------
+
+if (
+    "logged_in" not in st.session_state
+    or not st.session_state["logged_in"]
+):
     st.warning("Please log in first.")
     st.switch_page("pages/login.py")
 
@@ -19,55 +26,70 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
 vendor = st.session_state["vendor"]
 
 
+# -----------------------------
+# Page Header
+# -----------------------------
+
 st.title("📦 Add Product")
 
 st.write(
-    f"Adding product for: {vendor['business_name']}"
+    f"Adding product for: **{vendor['business_name']}**"
+)
+
+st.divider()
+
+
+# -----------------------------
+# Product Form
+# -----------------------------
+
+product_name = st.text_input(
+    "Product Name"
+)
+
+description = st.text_area(
+    "Description"
+)
+
+price = st.number_input(
+    "Price (₦)",
+    min_value=0.0,
+    step=100.0,
+)
+
+stock = st.number_input(
+    "Stock Quantity",
+    min_value=0,
+    step=1,
+)
+
+uploaded_image = st.file_uploader(
+    "Upload Product Image",
+    type=[
+        "jpg",
+        "jpeg",
+        "png",
+        "webp"
+    ]
 )
 
 
 st.divider()
 
 
-product_name = st.text_input(
-    "Product Name"
-)
-
-
-description = st.text_area(
-    "Description"
-)
-
-
-price = st.number_input(
-    "Price (₦)",
-    min_value=0.0,
-    step=100.0
-)
-
-
-stock = st.number_input(
-    "Stock Quantity",
-    min_value=0,
-    step=1
-)
-
-
-image_url = st.text_input(
-    "Image URL (optional)"
-)
-
-
+# -----------------------------
+# Save Product
+# -----------------------------
 
 if st.button(
     "✅ Add Product",
     use_container_width=True
 ):
 
-    if not product_name:
+    if not product_name.strip():
 
         st.error(
-            "Please enter product name."
+            "Please enter a product name."
         )
 
     elif price <= 0:
@@ -78,12 +100,27 @@ if st.button(
 
     else:
 
+        image_url = None
+
+        if uploaded_image is not None:
+
+            with st.spinner(
+                "Uploading image..."
+            ):
+
+                image_url = upload_image(
+                    uploaded_image
+                )
+
+                if image_url is None:
+
+                    st.stop()
+
         try:
 
             conn = get_connection()
+
             cur = conn.cursor()
-
-
             cur.execute(
                 """
                 INSERT INTO products
@@ -99,28 +136,26 @@ if st.button(
                 VALUES
                 (%s,%s,%s,%s,%s,%s)
                 """,
-
                 (
                     vendor["id"],
-                    product_name,
-                    description,
+                    product_name.strip(),
+                    description.strip(),
                     price,
                     stock,
                     image_url
                 )
             )
 
-
             conn.commit()
 
             cur.close()
             conn.close()
 
-
             st.success(
                 "✅ Product added successfully!"
             )
 
+            st.balloons()
 
         except Exception as e:
 
