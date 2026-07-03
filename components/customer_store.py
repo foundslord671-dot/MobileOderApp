@@ -162,6 +162,7 @@ Please confirm availability.
 
                 cart_product = {
                     "id": product_id,
+                    "vendor_id": vendor_id,
                     "name": name,
                     "price": price,
                     "image": image
