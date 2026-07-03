@@ -1,46 +1,94 @@
 import streamlit as st
 
-from database.models import create_tables
-from components.customer_store import show_customer_store
+# -----------------------------
+# SESSION STATE INITIALIZATION
+# -----------------------------
+if "cart" not in st.session_state:
+    st.session_state.cart = []
 
-
-# Create database tables
-create_tables()
-
-
-st.set_page_config(
-    page_title="Mobile Order App",
-    page_icon="🛒",
-    layout="wide"
-)
+if "page" not in st.session_state:
+    st.session_state.page = "store"
 
 
 # -----------------------------
-# Check if a store link was used
+# SAMPLE PRODUCTS
 # -----------------------------
+products = [
+    {"id": 1, "name": "Phone", "price": 50000},
+    {"id": 2, "name": "Laptop", "price": 350000},
+    {"id": 3, "name": "Headphones", "price": 15000},
+    {"id": 4, "name": "Shoes", "price": 20000},
+]
 
-store = st.query_params.get("store")
 
-if isinstance(store, list):
-    store = store[0]
+# -----------------------------
+# FUNCTIONS
+# -----------------------------
+def add_to_cart(product):
+    for item in st.session_state.cart:
+        if item["id"] == product["id"]:
+            item["qty"] += 1
+            return
+    st.session_state.cart.append({"id": product["id"], "name": product["name"], "price": product["price"], "qty": 1})
 
 
-if store:
+def cart_total():
+    return sum(item["price"] * item["qty"] for item in st.session_state.cart)
 
-    show_customer_store()
 
-else:
+# -----------------------------
+# STORE PAGE
+# -----------------------------
+def store_page():
+    st.title("🛍️ Store")
 
-    st.title("🛒 Mobile Order App")
+    st.button("Go to Cart 🛒", on_click=lambda: set_page("cart"))
 
-    st.write("""
-Welcome to the Mobile Order App.
+    st.write("---")
 
-Choose a page from the sidebar to continue.
-""")
+    for product in products:
+        st.subheader(product["name"])
+        st.write(f"Price: ₦{product['price']}")
 
-    st.sidebar.title("Navigation")
+        if st.button(f"Add {product['name']} to cart", key=product["id"]):
+            add_to_cart(product)
+            st.success("Added to cart!")
 
-    st.sidebar.success(
-        "Select a page from the sidebar."
-    )
+
+# -----------------------------
+# CART PAGE
+# -----------------------------
+def cart_page():
+    st.title("🛒 Your Cart")
+
+    if st.button("⬅ Back to Store"):
+        set_page("store")
+
+    st.write("---")
+
+    if len(st.session_state.cart) == 0:
+        st.info("Your cart is empty.")
+        return
+
+    for item in st.session_state.cart:
+        st.write(f"{item['name']} x{item['qty']} = ₦{item['price'] * item['qty']}")
+
+    st.write("---")
+    st.subheader(f"Total: ₦{cart_total()}")
+
+
+# -----------------------------
+# PAGE CONTROLLER
+# -----------------------------
+def set_page(page):
+    st.session_state.page = page
+    st.rerun()
+
+
+# -----------------------------
+# ROUTING
+# -----------------------------
+if st.session_state.page == "store":
+    store_page()
+elif st.session_state.page == "cart":
+    cart_page()
