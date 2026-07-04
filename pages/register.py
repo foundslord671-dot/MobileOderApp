@@ -1,15 +1,18 @@
 import streamlit as st
+import re
 
 from database.connection import get_connection
 from utils.security import hash_password
 from services.auth_service import login_vendor
 
 
+# -----------------------------
+# PAGE CONFIG
+# -----------------------------
 st.set_page_config(
     page_title="Vendor Registration",
     page_icon="📝"
 )
-
 
 st.title("📝 Vendor Registration")
 st.write("Create your vendor account below.")
@@ -17,37 +20,48 @@ st.write("Create your vendor account below.")
 st.divider()
 
 
+# -----------------------------
+# INPUTS
+# -----------------------------
 business_name = st.text_input("Business Name")
 owner_name = st.text_input("Owner Name")
-store_username = st.text_input("Store Username")
+
+store_username_input = st.text_input(
+    "Store Username (or leave blank to auto-generate)"
+)
 
 email = st.text_input("Email Address")
 phone = st.text_input("Phone Number")
 
-password = st.text_input(
-    "Password",
-    type="password"
-)
-
-confirm_password = st.text_input(
-    "Confirm Password",
-    type="password"
-)
-
+password = st.text_input("Password", type="password")
+confirm_password = st.text_input("Confirm Password", type="password")
 
 st.divider()
 
 
+# -----------------------------
+# SLUG FUNCTION
+# -----------------------------
+def generate_slug(text: str) -> str:
+    text = text.strip().lower()
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    text = re.sub(r"-+", "-", text)
+    return text.strip("-")
+
+
+# -----------------------------
+# SUBMIT
+# -----------------------------
 if st.button("Create Account", use_container_width=True):
 
+    # -------------------------
+    # VALIDATION
+    # -------------------------
     if not business_name:
         st.error("Please enter your business name.")
 
     elif not owner_name:
         st.error("Please enter your name.")
-
-    elif not store_username:
-        st.error("Please choose a store username.")
 
     elif not email:
         st.error("Please enter your email.")
@@ -63,25 +77,35 @@ if st.button("Create Account", use_container_width=True):
 
     else:
 
+        # -------------------------
+        # AUTO GENERATE STORE USERNAME
+        # -------------------------
+        if store_username_input.strip() == "":
+            store_username = generate_slug(business_name)
+        else:
+            store_username = generate_slug(store_username_input)
+
         try:
 
             conn = get_connection()
             cur = conn.cursor()
 
-            # Check existing email
+            # -------------------------
+            # CHECK EXISTING EMAIL
+            # -------------------------
             cur.execute(
                 "SELECT id FROM vendors WHERE email = %s",
                 (email,)
             )
-
             email_exists = cur.fetchone()
 
-            # Check existing username
+            # -------------------------
+            # CHECK EXISTING STORE USERNAME
+            # -------------------------
             cur.execute(
                 "SELECT id FROM vendors WHERE store_username = %s",
                 (store_username,)
             )
-
             username_exists = cur.fetchone()
 
             if email_exists:
@@ -119,44 +143,25 @@ if st.button("Create Account", use_container_width=True):
                 )
 
                 conn.commit()
-
                 cur.close()
                 conn.close()
 
-                # Automatically log the user in
-                success, result = login_vendor(
-                    email,
-                    password
-                )
+                # -------------------------
+                # AUTO LOGIN
+                # -------------------------
+                success, result = login_vendor(email, password)
 
                 if success:
-
                     st.session_state["logged_in"] = True
                     st.session_state["vendor"] = result
 
-                    st.success(
-                        "✅ Account created successfully!"
-                    )
-
-                    st.switch_page(
-                        "pages/vendor_dashboard.py"
-                    )
+                    st.success("✅ Account created successfully!")
+                    st.switch_page("pages/vendor_dashboard.py")
 
                 else:
-
-                    st.success(
-                        "✅ Account created successfully!"
-                    )
-
-                    st.info(
-                        "Please login with your new account."
-                    )
-
-            if not conn.closed:
-                cur.close()
-                conn.close()
+                    st.success("✅ Account created successfully!")
+                    st.info("Please login with your new account.")
 
         except Exception as e:
-
             st.error("Something went wrong.")
             st.write(e)
